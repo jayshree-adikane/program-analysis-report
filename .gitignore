@@ -1,0 +1,8 @@
+﻿__pycache__/
+generated_reports/
+PRA_*.html
+!PRA_test_campagin.html
+*.xlsx
+*.ods
+*.csv
+text.txt
