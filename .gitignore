@@ -6,3 +6,4 @@ PRA_*.html
 *.ods
 *.csv
 text.txt
+!pra_input_form.html

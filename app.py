@@ -19,7 +19,7 @@ from pathlib import Path
 import pandas as pd
 from flask import Flask, abort, jsonify, request, send_from_directory
 
-from New_generate_dynamic_pra import BASE_DIR, DATE_FORMATS, DEFAULT_TEMPLATE, HEX_COLOR, build_report
+from New_generate_dynamic_pra import BASE_DIR, DATE_FORMATS, DEFAULT_TEMPLATE, DESIGNS, HEX_COLOR, build_report
 
 REPORTS_DIR = BASE_DIR / "generated_reports"
 ALLOWED_EXT = {".xlsx", ".xls", ".ods", ".csv"}
@@ -64,6 +64,9 @@ def generate():
         }
         if inputs["date_format"] not in DATE_FORMATS:
             raise ValueError("Unknown date format.")
+        inputs["design"] = form.get("design", "classic")
+        if inputs["design"] not in DESIGNS:
+            raise ValueError("Unknown report design.")
         if any(not HEX_COLOR.match(c) for c in inputs["palette"]):
             raise ValueError("Chart colours must be hex values like #3f5bd8.")
 
@@ -81,6 +84,20 @@ def generate():
             if not raw.isdigit():
                 raise ValueError(f"{name.title()} must be a whole number >= 0.")
             inputs[name] = int(raw)
+
+        dev = {}
+        for key, label in (("desktop_pct", "Desktop %"), ("mobile_pct", "Mobile %")):
+            raw = form.get(key, "").replace("%", "").strip()
+            if raw:
+                if not raw.isdigit() or int(raw) > 100:
+                    raise ValueError(f"{label} must be a whole number from 0 to 100.")
+                dev[key] = int(raw)
+        if len(dev) == 1:  # one value given -> the other makes up the rest
+            only = next(iter(dev))
+            dev["mobile_pct" if only == "desktop_pct" else "desktop_pct"] = 100 - dev[only]
+        if dev and dev["desktop_pct"] + dev["mobile_pct"] != 100:
+            raise ValueError("Desktop % and Mobile % must add up to 100.")
+        inputs.update(dev)
 
         if inputs["delivered"] > inputs["sent"]:
             raise ValueError("Delivered cannot be greater than Sent.")
